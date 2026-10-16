@@ -1,0 +1,10 @@
+{
+  "name": "foley-party",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Foley Party: voice over a scene's sound effects without knowing what it is, then watch it come together",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "8.18.0" }
+}

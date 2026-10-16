@@ -1,0 +1,1418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Foley Party</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: header · main column (scene editor / recording studio / screening room) · side column (crew + progress). Stacks on phones. */
+:root{
+  --bg:#eef0f4; --surface:#ffffff; --ink:#17151f; --muted:#5e6075; --line:#d6d9e2;
+  --accent:#e5484d; --accent-ink:#ffffff; --amber:#f5a524; --ok:#1f9d55; --ok-bg:#dcf3e6;
+  --screen:#0d0c12; --wave:#17151f; --wave2:#e5484d; --shade:rgba(23,21,31,.12);
+  --display:"Archivo Black","Arial Black",Impact,system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111017; --surface:#1b1a24; --ink:#f1f0f6; --muted:#a3a2b5; --line:#2e2c3b;
+  --accent:#ff6369; --accent-ink:#16141d; --amber:#ffbf47; --ok:#3ccf7d; --ok-bg:#15301f;
+  --screen:#000000; --wave:#e9e8f2; --wave2:#ff6369; --shade:rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111017; --surface:#1b1a24; --ink:#f1f0f6; --muted:#a3a2b5; --line:#2e2c3b;
+  --accent:#ff6369; --accent-ink:#16141d; --amber:#ffbf47; --ok:#3ccf7d; --ok-bg:#15301f;
+  --screen:#000000; --wave:#e9e8f2; --wave2:#ff6369; --shade:rgba(0,0,0,.45); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-inline:16px;padding-block:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:14px;max-width:1200px;margin:0 auto}
+.logo{font-family:var(--display);font-size:24px;letter-spacing:.02em;margin:0;display:flex;align-items:center;gap:10px}
+.logo .rec{width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent);animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.pill{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;display:inline-flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)} .dot.on{background:var(--ok)}
+.notice{max-width:1200px;margin:0 auto 12px;background:var(--surface);border:1.5px dashed var(--accent);border-radius:12px;padding:10px 14px;font-size:14px}
+
+.btn{border:2px solid var(--ink);background:var(--accent);color:var(--accent-ink);font-weight:800;border-radius:12px;padding:10px 18px;box-shadow:3px 3px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.btn.amber{background:var(--amber);color:#17151f}
+.btn.wide{width:100%}
+.tbtn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 12px;font-weight:600}
+.tbtn.on{border-color:var(--accent);color:var(--accent)}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+.card{background:var(--surface);border:2px solid var(--ink);border-radius:18px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.panel{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.panel h3{margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.err{color:var(--accent);font-weight:600;font-size:14px;margin:0}
+
+/* join */
+.join{max-width:920px;margin:24px auto;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px;align-items:center}
+.join h2{font-family:var(--display);font-size:clamp(30px,5vw,48px);line-height:1.02;margin:0 0 12px;text-wrap:balance}
+.join h2 em{font-style:normal;color:var(--accent)}
+.join p{color:var(--muted);margin:0 0 10px;max-width:48ch}
+.steps{display:grid;gap:10px;margin:16px 0 0;padding:0;list-style:none}
+.steps li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start}
+.steps b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--bg);font-family:var(--display)}
+
+/* app */
+.app{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:18px;padding-bottom:28px;align-items:start}
+.main{display:grid;gap:16px;min-width:0}
+.crew{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.crew li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;border-radius:10px}
+.crew li.me{background:var(--bg)}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;border:2px solid var(--ink)}
+.nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.badge{font-size:12px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--bg);white-space:nowrap}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.rec{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+
+/* editor */
+.stage{position:relative;background:var(--screen);border-radius:14px;overflow:hidden;aspect-ratio:16/9;max-width:100%}
+.stage video{width:100%;height:100%;display:block;background:var(--screen)}
+.stage .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#c9c8d6;padding:20px}
+.timeline{position:relative;height:46px;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;margin-top:10px;cursor:pointer;overflow:hidden;touch-action:none}
+.timeline .scene{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--amber) 22%,transparent);border-left:2px solid var(--amber);border-right:2px solid var(--amber)}
+.timeline .seg{position:absolute;top:8px;bottom:8px;border-radius:6px;background:var(--accent);opacity:.85;color:#fff;font:700 11px/30px var(--mono);text-align:center;overflow:hidden}
+.timeline .pending{position:absolute;top:4px;bottom:4px;width:3px;background:var(--accent)}
+.timeline .head{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+.timecode{font-family:var(--mono);font-weight:700;font-size:14px}
+.seglist{display:grid;gap:8px;margin-top:4px}
+.segrow{display:grid;grid-template-columns:28px minmax(0,1.1fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.2fr) auto;gap:8px;align-items:center;padding:8px;border:1.5px solid var(--line);border-radius:12px}
+.segrow .n{font-family:var(--display);color:var(--accent);text-align:center}
+.segrow input,.segrow select{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px;font-size:13px}
+.segrow .t{display:flex;gap:4px;align-items:center;font-family:var(--mono);font-size:12px}
+.segrow .t input{width:5.2em;padding:5px 6px;font-family:var(--mono)}
+.iconbtn{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 9px;font-weight:700}
+.parts{margin-top:16px;border-top:1.5px dashed var(--line);padding-top:14px}
+.lane{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 76px;gap:8px;align-items:center;margin-top:8px}
+.lane input{width:100%;min-width:0;border:1.5px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px;font-size:13px;font-weight:600}
+.lane .timeline{margin-top:0;height:44px}
+.lane .timeline canvas{position:absolute;inset:0;width:100%;height:100%}
+.lane.sel .timeline,.mixlane.sel .timeline{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.lane .meta{display:block;font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
+.partbadge{display:inline-block;background:var(--ink);color:var(--bg);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:800;letter-spacing:.04em}
+.tracks{display:grid;gap:8px;margin-top:12px}
+.tracks .tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;align-items:center}
+.tracks select{width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 8px}
+.progress{height:10px;background:var(--bg);border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+
+/* studio */
+.clips{display:grid;gap:16px}
+.clip{background:var(--surface);border:2px solid var(--ink);border-radius:18px;padding:16px;box-shadow:5px 5px 0 var(--ink);display:grid;gap:12px;min-width:0}
+.clip.done{border-color:var(--ok);box-shadow:5px 5px 0 var(--ok)}
+.clip h4{margin:0;font-family:var(--display);font-size:20px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.clip .note{background:var(--bg);border-radius:10px;padding:8px 12px;font-size:14px}
+.waves{position:relative;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden;touch-action:none}
+.waves canvas{display:block;width:100%;height:150px}
+.waves .cd{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:64px;color:var(--accent);background:color-mix(in srgb,var(--bg) 70%,transparent);pointer-events:none}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:4px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.offset{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.offset input[type=range]{width:100%;accent-color:var(--accent)}
+.recbtn{background:var(--accent);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:10px 20px;font-weight:800;display:inline-flex;align-items:center;gap:8px;box-shadow:3px 3px 0 var(--ink)}
+.recbtn::before{content:"";width:12px;height:12px;border-radius:50%;background:#fff}
+.recbtn.stop::before{border-radius:2px}
+.switch{display:flex;gap:8px;align-items:center;font-size:14px}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+
+/* screening */
+.screen{background:var(--screen);border-radius:18px;padding:12px;box-shadow:0 18px 50px var(--shade)}
+.screen .stage{border-radius:10px}
+.caption{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);background:rgba(13,12,18,.82);color:#fff;border-radius:999px;padding:6px 16px;font-weight:800;font-size:clamp(13px,2.2vw,18px);white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.caption .mic{color:var(--amber)}
+.titlecard{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;background:radial-gradient(circle,#2a2236,#0d0c12 70%);padding:20px}
+.titlecard h2{font-family:var(--display);font-size:clamp(24px,5vw,46px);margin:0 0 6px;text-wrap:balance}
+.titlecard p{margin:0;color:#c9c8d6}
+.credits{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.credits li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:10px;background:var(--bg)}
+.ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:12px}
+
+.tips{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:grid;gap:4px}
+
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}.side{order:-1}}
+@media (max-width:720px){
+  .join{grid-template-columns:minmax(0,1fr)}
+  .segrow{grid-template-columns:28px minmax(0,1fr) auto}
+  .segrow .note-in,.segrow .who,.segrow .part{grid-column:2 / -1}
+  .lane{grid-template-columns:minmax(0,1fr) 76px}.lane .timeline{grid-column:1 / -1;grid-row:2}
+}
+@media (prefers-reduced-motion: reduce){.logo .rec{animation:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="logo"><span class="rec" aria-hidden="true"></span>Foley Party</h1>
+  <div class="status">
+    <span class="pill" id="roomPill" hidden><span class="dot" id="connDot"></span><span id="roomLabel"></span></span>
+    <button class="tbtn" id="copyBtn" type="button" hidden>Copy invite link</button>
+    <input id="inviteTxt" class="pill" readonly hidden aria-label="Invite link" style="width:16em;max-width:100%">
+  </div>
+</header>
+<div class="notice" id="notice" hidden></div>
+
+<!-- ============ JOIN ============ -->
+<section class="join" id="join">
+  <div>
+    <h2>Make the noises. <em>Find out what they were.</em></h2>
+    <p>The host picks a scene from a video. Everyone gets a few seconds of its sound, with no picture, and records their best copy. When everyone's done, the scene plays back with only your sounds on it.</p>
+    <ul class="steps">
+      <li><b>1</b><span>The host loads a short clip and marks the sound moments.</span></li>
+      <li><b>2</b><span>Each player hears only their bits and copies them into the mic.</span></li>
+      <li><b>3</b><span>Nudge your timing until it lines up, then send it.</span></li>
+      <li><b>4</b><span>Watch the scene together, dubbed by you.</span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <form id="joinForm">
+      <div class="field"><label class="lbl" for="nameIn">Your name</label><input id="nameIn" maxlength="16" placeholder="e.g. Thiri" required autocomplete="nickname"></div>
+      <div class="field"><label class="lbl" for="roomIn">Room code</label><input id="roomIn" maxlength="20" placeholder="e.g. k7m2p" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+      <p class="err" id="joinErr" hidden style="margin:-6px 0 10px"></p>
+      <div style="display:grid;gap:10px">
+        <button class="btn wide" id="joinBtn" type="submit">Join this room</button>
+        <button class="btn ghost wide" id="createBtn" type="button">Create a room and host</button>
+      </div>
+      <p class="hint" style="margin-top:12px">You'll need a microphone. Headphones help a lot.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div class="app" id="app" hidden>
+  <main class="main">
+
+    <!-- lobby / host editor -->
+    <section id="lobby" hidden>
+      <div class="panel" id="waitPanel" hidden>
+        <h3>Waiting for the scene</h3>
+        <p id="waitText" style="margin:0 0 10px">The host is choosing a scene and marking the sounds.</p>
+        <ul class="tips">
+          <li>Find a quiet spot and plug in headphones if you have them.</li>
+          <li>You'll hear a few seconds of sound. Copy it with your voice, hands, or anything nearby.</li>
+          <li>You won't see the picture until the end.</li>
+        </ul>
+        <div class="row" style="margin-top:14px"><button class="tbtn" id="micTestBtn" type="button">Test my microphone</button><span class="hint" id="micTestOut"></span></div>
+        <div class="row" style="margin-top:10px" id="claimRow" hidden><button class="btn ghost" id="claimBtn" type="button">I'll host the next scene</button></div>
+      </div>
+
+      <div class="panel" id="editor" hidden>
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0">Scene setup <span style="text-transform:none;letter-spacing:0;font-weight:600">· only you can see this</span></h3>
+          <label class="btn amber" for="fileIn" style="cursor:pointer">Load a video</label>
+          <input type="file" id="fileIn" accept="video/*" hidden>
+        </div>
+        <div class="stage" id="edStage">
+          <video id="edVideo" playsinline preload="auto"></video>
+          <div class="empty" id="edEmpty"><div><b>Load a short video clip</b><br><span style="font-size:14px">MP4 works best. Keep it under 80 MB and ideally 20–60 seconds.</span></div></div>
+        </div>
+        <div id="edTools" hidden>
+          <div class="row" style="justify-content:space-between;margin-top:10px">
+            <div class="row">
+              <button class="iconbtn" id="edPlay" type="button">▶︎ Play</button>
+              <button class="iconbtn" id="edBack" type="button" title="Back 0.1 s">−0.1s</button>
+              <button class="iconbtn" id="edFwd" type="button" title="Forward 0.1 s">+0.1s</button>
+              <span class="timecode" id="edTime">0:00.0</span>
+            </div>
+            <div class="row">
+              <button class="tbtn" id="sceneInBtn" type="button">Scene starts here</button>
+              <button class="tbtn" id="sceneOutBtn" type="button">Scene ends here</button>
+            </div>
+          </div>
+          <div class="lane mixlane sel" id="mixLane" style="margin-top:10px"><div><span class="lbl">Full mix</span><span class="meta">the video's own sound</span></div><div class="timeline" id="timeline" aria-label="Timeline"></div><span></span></div>
+          <div id="lanes"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="markBtn" type="button">● Start a sound here</button>
+            <span class="hint" id="markHint">Play or scrub to a sound, press start, then press again where it ends. Keep each sound under 12 seconds.</span>
+          </div>
+
+          <div class="parts">
+            <div class="row" style="justify-content:space-between">
+              <span class="lbl">Sound parts</span>
+              <div class="row">
+                <button class="tbtn" id="quickSplit" type="button">Quick split (built-in)</button>
+                <label class="tbtn" for="stemIn" style="cursor:pointer">Add part files…</label>
+                <input type="file" id="stemIn" accept="audio/*,.wav,.mp3,.flac,.m4a,.ogg" multiple hidden>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:6px">Split the soundtrack so each player hears just one part, like only the effects or only the voices. <b>Best:</b> run your clip through <a href="https://mvsep.com" target="_blank" rel="noopener">mvsep.com</a> with a <i>DnR v3</i> model (speech, music, sfx) or <i>Demucs</i> (vocals, drums, bass, other), download the parts and add them here; they're lined up automatically. <b>Quick split</b> works without any download but is rough: it separates hits and bangs from tones and voices.</p>
+            <p class="hint" id="partStatus" style="margin-top:6px"></p>
+            <div class="row" style="margin-top:8px" id="hearRow" hidden><label class="lbl" for="hearSel">Hear while previewing</label><select id="hearSel" style="border:1.5px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px"></select></div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="row" style="justify-content:space-between">
+              <span class="lbl">Sounds to voice (<span id="segCount">0</span>)</span>
+              <div class="row">
+                <label class="switch"><input type="checkbox" id="hostVoices" checked> I'll voice some too</label>
+                <button class="tbtn" id="autoAssign" type="button">Share out evenly</button>
+              </div>
+            </div>
+            <div class="seglist" id="seglist"></div>
+          </div>
+
+          <div class="field" style="margin-top:16px"><label class="lbl" for="titleIn">Scene title (revealed at the end)</label><input id="titleIn" maxlength="80" placeholder="e.g. Arcane S1 – the bar fight"></div>
+          <div class="row">
+            <button class="btn" id="sendBtn" type="button">Send sounds to players</button>
+            <span class="hint" id="sendHint"></span>
+          </div>
+          <div id="sendProg" hidden style="margin-top:10px"><div class="progress"><i id="sendBar"></i></div><p class="hint" id="sendStep" style="margin-top:6px"></p></div>
+          <p class="err" id="edErr" hidden style="margin-top:8px"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- recording -->
+    <section id="record" hidden>
+      <div class="panel" id="recHead">
+        <h3>Your sounds</h3>
+        <p style="margin:0" id="recIntro">Listen, copy, line it up, send. You can redo a take as many times as you like.</p>
+        <div class="row" style="margin-top:10px">
+          <label class="switch"><input type="checkbox" id="monitor"> Play the original while I record (use headphones)</label>
+        </div>
+      </div>
+      <div class="clips" id="clips"></div>
+      <div class="panel" id="hostWait" hidden>
+        <h3>Recording in progress</h3>
+        <p style="margin:0 0 10px" id="hostWaitText"></p>
+        <div class="row">
+          <button class="btn" id="revealBtn" type="button">Reveal the scene</button>
+          <span class="hint" id="revealHint"></span>
+        </div>
+        <div id="vidProg" style="margin-top:10px"><div class="progress"><i id="vidBar"></i></div><p class="hint" id="vidStep" style="margin-top:6px"></p></div>
+      </div>
+      <div class="panel" id="noClips" hidden>
+        <h3>Sit tight</h3>
+        <p style="margin:0">You don't have any sounds in this scene. Watch the progress on the side; the reveal is coming.</p>
+      </div>
+    </section>
+
+    <!-- reveal -->
+    <section id="reveal" hidden>
+      <div class="screen">
+        <div class="stage" id="scStage">
+          <video id="scVideo" playsinline muted preload="auto"></video>
+          <div class="titlecard" id="scTitle"><div><h2 id="scTitleText">The screening</h2><p id="scTitleSub">Tap below to take your seat.</p></div></div>
+          <div class="caption" id="scCap" hidden></div>
+        </div>
+      </div>
+      <div class="ctl">
+        <button class="btn" id="seatBtn" type="button">Take my seat</button>
+        <span class="hint" id="seatStatus"></span>
+      </div>
+      <div class="panel" id="hostCtl" hidden style="margin-top:4px">
+        <h3>Projector (host)</h3>
+        <div class="row">
+          <button class="btn" id="playDub" type="button">▶︎ Play our version</button>
+          <button class="btn ghost" id="playOrig" type="button">Play the original</button>
+          <button class="btn ghost" id="stopBtn" type="button">■ Stop</button>
+        </div>
+        <div class="tracks" id="tracks"></div>
+        <p class="hint" id="readyText" style="margin-top:8px"></p>
+        <div class="row" style="margin-top:12px"><button class="tbtn" id="newSceneBtn" type="button">Start a new scene</button></div>
+      </div>
+      <div class="panel" style="margin-top:4px">
+        <h3>Sound credits</h3>
+        <ul class="credits" id="credits"></ul>
+      </div>
+    </section>
+  </main>
+
+  <aside class="side">
+    <div class="panel">
+      <h3 id="crewTitle">Crew</h3>
+      <ul class="crew" id="crew"></ul>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = { get(k){ try{return localStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{localStorage.setItem(k,v)}catch(e){} } };
+const AVC = ['#e5484d','#2f6fde','#1f9d55','#8e44ad','#d48806','#d6336c','#0f8b8d','#8b5a2b','#5c6ac4','#c2410c','#3b7d23','#6b21a8'];
+const PRE = 0.4;            // seconds of take kept before the "go" moment
+const TAIL = 1.0;           // seconds recorded after the sound ends
+const MAX_SEG = 12, MIN_SEG = 0.3, MAX_OFF = 1.5;
+const fmt = t => { if(!isFinite(t)) t = 0; const m = Math.floor(t/60), s = t - m*60; return m + ':' + (s<10?'0':'') + s.toFixed(1); };
+const cleanCode = v => String(v||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20);
+function randomCode(){ const a='abcdefghjkmnpqrstuvwxyz23456789'; let s=''; for(let i=0;i<5;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
+function showNotice(t){ const n=$('#notice'); n.textContent=t; n.hidden=false; }
+function hideNotice(){ $('#notice').hidden = true; }
+
+// ================= connection =================
+function makeServerRoom(code, onStatus){
+  const label = 'u' + Math.random().toString(36).slice(2,10);
+  const hs = {}, ph = [], rawHs = [];
+  let roster = {}, myPres = {}, sock = null, lastMsg = 0, tries = 0, ever = false, dead = false;
+  let peersArr = [{peer:label, isMe:true, presence:{}}];
+  function applyRoster(r){
+    r = {...r, [label]: myPres};
+    const old = new Map(peersArr.map(p=>[p.peer,p])), joined = [], left = [];
+    const next = Object.entries(r).map(([l,pres]) => ({peer:l, isMe:l===label, presence: pres && typeof pres==='object' ? pres : {}}));
+    for(const p of next){ if(!old.has(p.peer)) joined.push(p); old.delete(p.peer); }
+    left.push(...old.values()); peersArr = next; roster = r;
+    ph.forEach(f=>f({peers:next, joined, left}));
+  }
+  function send(m){ if(sock && sock.readyState===1) try{ sock.send(JSON.stringify(m)); }catch(e){} }
+  function connect(){
+    if(dead) return;
+    const url = (location.protocol==='https:'?'wss://':'ws://') + location.host + '/ws?room=' + encodeURIComponent(code);
+    let s; try{ s = new WebSocket(url); }catch(e){ return retry(); }
+    sock = s; onStatus('connecting');
+    const t = setTimeout(()=>{ if(s.readyState!==1) try{s.close();}catch(e){} }, 20000);
+    s.onopen = () => { clearTimeout(t); tries = 0; ever = true; lastMsg = Date.now(); send({t:'hello', label, pres:myPres}); onStatus('connected'); };
+    s.onmessage = e => {
+      lastMsg = Date.now(); let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(!m || typeof m!=='object') return;
+      if(m.t==='roster') applyRoster(m.roster||{});
+      else if(m.t==='ev' && typeof m.topic==='string') (hs[m.topic]||[]).forEach(f=>{ try{ f({peer:m.from, data:m.data}); }catch(err){ console.error(err); } });
+      else if(m.t==='full'){ dead = true; onStatus('full'); }
+      else rawHs.forEach(f=>f(m));
+    };
+    s.onclose = () => { clearTimeout(t); if(sock!==s) return; sock = null; onStatus('lost'); retry(); };
+    s.onerror = () => {};
+  }
+  function retry(){ if(dead) return; tries++; onStatus(ever?'lost':'unreachable', tries); setTimeout(connect, Math.min(8000, 500*Math.pow(1.6,tries)) + Math.random()*400); }
+  setInterval(()=>{ if(sock && sock.readyState===1){ if(Date.now()-lastMsg > 30000) try{sock.close();}catch(e){} else send({t:'ping'}); } }, 10000);
+  connect();
+  return {
+    label, code,
+    emit(topic, data){ send({t:'ev', topic, data}); },
+    on(topic, f){ (hs[topic]=hs[topic]||[]).push(f); },
+    raw(m){ send(m); }, onRaw(f){ rawHs.push(f); },
+    presence(patch){ myPres = {...myPres, ...patch}; send({t:'pres', pres:myPres}); applyRoster(roster); },
+    peers(){ return peersArr; },
+    onPeers(f){ ph.push(f); },
+    connected(){ return !!(sock && sock.readyState===1); }
+  };
+}
+
+// clock sync with the server, so the screening starts at the same moment everywhere
+let clockOffset = 0, bestRtt = Infinity;
+function syncClock(){ for(let i=0;i<6;i++) setTimeout(()=> room && room.raw({t:'time', c:Date.now()}), i*350); }
+function onTime(m){
+  if(m.t!=='time' || typeof m.c!=='number' || typeof m.s!=='number') return;
+  const now = Date.now(), rtt = now - m.c;
+  if(rtt < bestRtt || rtt < 60){ bestRtt = Math.min(bestRtt, rtt); clockOffset = m.s - (m.c + rtt/2); }
+}
+const serverNow = () => Date.now() + clockOffset;
+setInterval(() => { if(room && room.connected()){ bestRtt = Infinity; syncClock(); } }, 60000);
+
+// ================= HTTP files =================
+function upload(blob, kind, onProgress){
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', '/blob/' + room.code + '?kind=' + kind);
+    x.setRequestHeader('content-type', blob.type || (kind==='video' ? 'video/mp4' : 'audio/wav'));
+    x.upload.onprogress = e => { if(e.lengthComputable && onProgress) onProgress(e.loaded/e.total); };
+    x.onload = () => { let r = {}; try{ r = JSON.parse(x.responseText); }catch(e){}
+      if(x.status===200 && r.id) resolve(r); else reject(new Error(r.error || ('Upload failed (' + x.status + ')'))); };
+    x.onerror = () => reject(new Error('Upload failed. Check your connection.'));
+    x.send(blob);
+  });
+}
+function download(id, onProgress){
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', '/blob/' + room.code + '/' + id); x.responseType = 'arraybuffer';
+    x.onprogress = e => { if(e.lengthComputable && onProgress) onProgress(e.loaded/e.total); };
+    x.onload = () => { if(x.status===200) resolve({buf:x.response, type:x.getResponseHeader('content-type')||''}); else reject(new Error(x.status===403 ? 'not revealed yet' : 'Download failed (' + x.status + ')')); };
+    x.onerror = () => reject(new Error('Download failed. Check your connection.'));
+    x.send();
+  });
+}
+
+// ================= audio helpers =================
+let actx = null;
+function ctx(){ if(!actx){ const C = window.AudioContext || window.webkitAudioContext; actx = new C(); } return actx; }
+function decode(arrayBuffer){
+  const c = ctx();
+  return new Promise((res, rej) => { const p = c.decodeAudioData(arrayBuffer.slice(0), res, rej); if(p && p.then) p.then(res, rej); });
+}
+async function toMono(buffer, a, b, rate){
+  // cut a..b out of a buffer, mix to mono and resample
+  const len = Math.max(1, Math.round((b-a)*rate));
+  const OC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const oc = new OC(1, len, rate);
+  const src = oc.createBufferSource(); src.buffer = buffer; src.connect(oc.destination);
+  if(a >= 0) src.start(0, a, b-a); else if(b > 0) src.start(-a, 0, b);
+  const out = await oc.startRendering();
+  return out.getChannelData(0);
+}
+// ---- splitting: a small FFT and harmonic/percussive separation (median filtering)
+function makeFFT(n){
+  const lev = Math.log2(n), rev = new Uint32Array(n), cos = new Float64Array(n/2), sin = new Float64Array(n/2);
+  for(let i=0;i<n;i++){ let r=0, x=i; for(let b=0;b<lev;b++){ r=(r<<1)|(x&1); x>>=1; } rev[i]=r; }
+  for(let i=0;i<n/2;i++){ cos[i]=Math.cos(2*Math.PI*i/n); sin[i]=Math.sin(2*Math.PI*i/n); }
+  return (re, im, inv) => {
+    for(let i=0;i<n;i++){ const j=rev[i]; if(j>i){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; } }
+    for(let size=2; size<=n; size<<=1){ const half=size>>1, step=n/size;
+      for(let i=0;i<n;i+=size) for(let j=0;j<half;j++){ const k=j*step, wr=cos[k], wi=inv?sin[k]:-sin[k], a=i+j, b=a+half;
+        const tr=re[b]*wr-im[b]*wi, ti=re[b]*wi+im[b]*wr; re[b]=re[a]-tr; im[b]=im[a]-ti; re[a]+=tr; im[a]+=ti; } }
+    if(inv) for(let i=0;i<n;i++){ re[i]/=n; im[i]/=n; }
+  };
+}
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+async function hpss(x, onProg){
+  const N = 1024, hop = 256, bins = N/2 + 1, ht = 8, hf = 15, fft = makeFFT(N);   // 17 frames across time, 31 bins across pitch
+  const win = new Float64Array(N); for(let i=0;i<N;i++) win[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/N);
+  const F = Math.ceil(x.length/hop) + 1;
+  const RE = new Float32Array(F*bins), IM = new Float32Array(F*bins), M = new Float32Array(F*bins);
+  const re = new Float64Array(N), im = new Float64Array(N);
+  for(let f=0; f<F; f++){
+    const st = f*hop - N/2;
+    for(let i=0;i<N;i++){ const j = st+i; re[i] = (j>=0 && j<x.length) ? x[j]*win[i] : 0; im[i] = 0; }
+    fft(re, im, false);
+    for(let k=0;k<bins;k++){ const o = f*bins+k; RE[o]=re[k]; IM[o]=im[k]; M[o]=Math.hypot(re[k], im[k]); }
+    if(f % 400 === 0){ onProg && onProg(0.25*f/F); await yieldUI(); }
+  }
+  const Hm = new Float32Array(F*bins), Pm = new Float32Array(F*bins), w = new Float32Array(2*Math.max(ht,hf)+1);
+  const med = n => { for(let i=1;i<n;i++){ const v=w[i]; let j=i-1; while(j>=0 && w[j]>v){ w[j+1]=w[j]; j--; } w[j+1]=v; } return w[n>>1]; };
+  for(let f=0; f<F; f++){
+    for(let k=0;k<bins;k++){
+      let n=0; for(let d=-ht; d<=ht; d++){ const g=f+d; if(g>=0 && g<F) w[n++] = M[g*bins+k]; } Hm[f*bins+k] = med(n);
+      n=0; for(let d=-hf; d<=hf; d++){ const q=k+d; if(q>=0 && q<bins) w[n++] = M[f*bins+q]; } Pm[f*bins+k] = med(n);
+    }
+    if(f % 150 === 0){ onProg && onProg(0.25 + 0.5*f/F); await yieldUI(); }
+  }
+  const out = [new Float32Array(x.length), new Float32Array(x.length)], norm = new Float32Array(x.length);
+  for(let f=0; f<F; f++){
+    const st = f*hop - N/2;
+    for(let pass=0; pass<2; pass++){
+      for(let k=0;k<bins;k++){ const o=f*bins+k, hb=4*Hm[o]*Hm[o], p2=Pm[o]*Pm[o], mp = p2/(p2+hb+1e-12), m = pass===0 ? 1 - mp : mp;   // a hit must be clearly sharper than the tones around it
+        re[k]=RE[o]*m; im[k]=IM[o]*m; if(k>0 && k<N/2){ re[N-k]=re[k]; im[N-k]=-im[k]; } }
+      fft(re, im, true);
+      const y = out[pass];
+      for(let i=0;i<N;i++){ const j=st+i; if(j>=0 && j<x.length) y[j] += re[i]*win[i]; }
+    }
+    for(let i=0;i<N;i++){ const j=st+i; if(j>=0 && j<x.length) norm[j] += win[i]*win[i]; }
+    if(f % 400 === 0){ onProg && onProg(0.75 + 0.25*f/F); await yieldUI(); }
+  }
+  for(let i=0;i<x.length;i++){ const n = norm[i] > 1e-6 ? norm[i] : 1; out[0][i] /= n; out[1][i] /= n; }
+  return { harm: out[0], perc: out[1] };
+}
+function alignPart(mixData, mixRate, partData, partRate){
+  // find how far a part file is shifted against the video's own sound (most tools keep it at 0)
+  const A = onsetEnv(mixData, mixRate).v, B = onsetEnv(partData, partRate).v, L = Math.min(A.length, 9000);
+  let best = 0, bs = -Infinity;
+  for(let d=-200; d<=200; d++){ let s=0; for(let i=0;i<L;i++){ const j=i+d; if(j>=0 && j<B.length) s += A[i]*B[j]; } if(s>bs){ bs=s; best=d; } }
+  return -best/100;
+}
+const PART_NAMES = [[/vocal|voice|speech|dialog|dialogue/i,'Voices'],[/sfx|effect|fx/i,'Sound effects'],[/drum|perc/i,'Drums'],[/bass/i,'Bass'],[/music|instrum|accomp/i,'Music'],[/guitar/i,'Guitar'],[/piano/i,'Piano'],[/other|rest/i,'Other']];
+function partName(file){ const n = file.name.replace(/\.[^.]+$/,''); for(const [re,l] of PART_NAMES) if(re.test(n)) return l; return n.slice(0,24); }
+function encodeWAV(samples, rate){
+  const buf = new ArrayBuffer(44 + samples.length*2), v = new DataView(buf);
+  const w = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4, 36 + samples.length*2, true); w(8,'WAVE'); w(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  w(36,'data'); v.setUint32(40, samples.length*2, true);
+  for(let i=0;i<samples.length;i++){ const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44+i*2, s<0 ? s*0x8000 : s*0x7fff, true); }
+  return new Blob([buf], {type:'audio/wav'});
+}
+function bufferFrom(samples, rate){ const b = ctx().createBuffer(1, Math.max(1,samples.length), rate); b.getChannelData(0).set(samples); return b; }
+function playBuf(buffer, when, gain, offset){
+  const c = ctx(), s = c.createBufferSource(), g = c.createGain();
+  s.buffer = buffer; g.gain.value = gain==null ? 1 : gain; s.connect(g).connect(c.destination);
+  s.start(when || c.currentTime, offset || 0); return s;
+}
+function beep(when, freq){
+  const c = ctx(), o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = freq; g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.25, when+0.01); g.gain.exponentialRampToValueAtTime(0.0001, when+0.08);
+  o.connect(g).connect(c.destination); o.start(when); o.stop(when+0.1);
+}
+function peaks(data, n){
+  const out = new Float32Array(n), step = data.length / n;
+  for(let i=0;i<n;i++){ let m = 0; const a = Math.floor(i*step), b = Math.min(data.length, Math.floor((i+1)*step)); for(let j=a;j<b;j++){ const v = Math.abs(data[j]); if(v>m) m=v; } out[i] = m; }
+  return out;
+}
+function onsetEnv(data, rate){
+  // how sharply the sound gets louder, every 10 ms; quiet background is ignored
+  const hop = Math.max(1, Math.round(rate*0.01)), n = Math.floor(data.length/hop), db = new Float32Array(n);
+  let peak = -120;
+  for(let i=0;i<n;i++){ let s=0; for(let j=i*hop;j<(i+1)*hop;j++) s += data[j]*data[j]; db[i] = 10*Math.log10(s/hop + 1e-12); if(db[i] > peak) peak = db[i]; }
+  const floor = Math.max(peak - 30, -55), range = Math.max(1, peak - floor);
+  const env = db.map(v => Math.max(0, (v - floor) / range));
+  const on = new Float32Array(n);
+  for(let i=1;i<n;i++) on[i] = Math.max(0, env[i] - env[i-1]);
+  const sm = new Float32Array(n);
+  for(let i=0;i<n;i++){ let s=0; for(let k=-2;k<=2;k++){ const j=i+k; if(j>=0&&j<n) s += on[j]; } sm[i] = s/5; }
+  return { v: sm, loud: peak > -50 };
+}
+function autoOffset(orig, origRate, take, takeRate){
+  const A = onsetEnv(orig, origRate), B = onsetEnv(take, takeRate);
+  if(!A.loud || !B.loud) return { off:0, sure:false };
+  const a = A.v, b = B.v, pre = Math.round(PRE*100), maxLag = Math.round(MAX_OFF*100);
+  const norm = x => Math.sqrt(x.reduce((s,v)=>s+v*v, 0)) || 1;
+  const na = norm(a);
+  let best = 0, bestScore = -1;
+  const scores = [];
+  for(let d=-maxLag; d<=maxLag; d++){
+    let s = 0, bb = 0;
+    for(let i=0;i<a.length;i++){ const j = i + pre + d; if(j>=0 && j<b.length){ s += a[i]*b[j]; bb += b[j]*b[j]; } }
+    const c = s / (na * (Math.sqrt(bb) || 1));       // 0..1, how alike the two patterns are at this shift
+    scores.push(c);
+    if(c > bestScore){ bestScore = c; best = d; }
+  }
+  // trust it only when the patterns really match and one shift clearly wins
+  const sorted = scores.slice().sort((x,y)=>y-x), median = sorted[Math.floor(sorted.length/2)];
+  const sure = bestScore > 0.62 && bestScore - median > 0.25;
+  return { off: sure ? Math.max(-MAX_OFF, Math.min(MAX_OFF, -best/100)) : 0, sure, score: bestScore };
+}
+
+// ================= state =================
+let room = null, me = null, myName = '', creating = false;
+let peers = [];
+let S = null;                  // shared game state; the host is the source of truth
+let lastStateAt = 0;
+const H = {                    // host-only, never sent
+  file:null, url:null, dur:0, audio:null, inT:0, outT:0, segs:[], pendingA:null, key:null, videoId:null, title:'', uploading:false,
+  stems:[], lane:-1, hear:-1, stemKeys:[], splitting:false
+};
+const present = p => peers.some(x=>x.peer===p);
+const isHost = () => !!(S && S.host===me);
+function nameOf(p){ const x = peers.find(y=>y.peer===p); const n = x && x.presence && x.presence.name; if(typeof n==='string' && n.trim()) return n.slice(0,16);
+  const k = S && S.names && S.names[p]; return k ? String(k).slice(0,16) : 'Someone'; }
+function colorOf(p){ let h=0; for(const ch of String(p)) h=(h*31+ch.charCodeAt(0))>>>0; return AVC[h%AVC.length]; }
+function avHTML(p){ const n = nameOf(p); return `<span class="av" style="background:${colorOf(p)}">${esc((n[0]||'?').toUpperCase())}</span>`; }
+
+function commit(){
+  if(!isHost()) return;
+  S.v++; S.names = Object.fromEntries(peers.filter(p=>p.presence.name).map(p=>[p.peer, String(p.presence.name).slice(0,16)]));
+  room.emit('state', S); render();
+}
+function newState(host){ return { v:(S?S.v:0)+1, host, phase:'lobby', segs:[], stems:[], takes:{}, video:null, title:'', inT:0, outT:0, play:{n:0}, names:{} }; }
+
+function onState(msg){
+  const d = msg.data;
+  if(!d || typeof d!=='object' || typeof d.v!=='number' || !Array.isArray(d.segs)) return;
+  if(d.host!==msg.peer && !(S && S.host===msg.peer)) return;   // only the host (or the host handing over) may change the game
+  if(S && d.v <= S.v && present(S.host) && S.host===d.host) return;
+  if(S && S.host!==d.host && present(S.host) && d.v <= S.v) return;
+  const prev = S; S = d; lastStateAt = Date.now();
+  if(msg.peer===me) return;
+  onStateChange(prev);
+}
+function onStateChange(prev){
+  if(!prev || prev.phase!==S.phase) studio.reset();
+  if(prev && prev.phase==='reveal' && S.phase!=='reveal') screening.reset();
+  if(S.phase==='reveal'){ screening.onState(prev); }
+  render();
+}
+
+// ================= host: scene editor =================
+const edVideo = $('#edVideo');
+function hostLoadFile(file){
+  $('#edErr').hidden = true;
+  if(!file) return;
+  if(!/^video\//.test(file.type)){ edError('That file isn’t a video. Choose an MP4 or WebM clip.'); return; }
+  if(file.size > 80*1024*1024){ edError(`That video is ${(file.size/1048576).toFixed(0)} MB. The limit is 80 MB, so trim it to just the scene first.`); return; }
+  if(H.url) URL.revokeObjectURL(H.url);
+  H.file = file; H.url = URL.createObjectURL(file); H.audio = null; H.segs = []; H.pendingA = null; H.videoId = null; H.key = null;
+  H.stems = []; H.lane = -1; H.hear = -1; H.stemKeys = []; edStopPart(); $('#partStatus').textContent = '';
+  edVideo.src = H.url; $('#edEmpty').hidden = true; $('#edTools').hidden = false;
+  edVideo.onloadedmetadata = () => {
+    H.dur = edVideo.duration || 0; H.inT = 0; H.outT = H.dur;
+    const saved = store.get('fp-scene:' + file.name + ':' + file.size);
+    if(saved){ try{ const o = JSON.parse(saved); if(Array.isArray(o.segs)){ H.segs = o.segs.filter(s=>s.b<=H.dur+0.01).map(s=>({a:+s.a, b:+s.b, note:String(s.note||'').slice(0,80), who:null, stem:-1, stemLabel:String(s.stemLabel||'')})); H.inT = Math.min(+o.inT||0, H.dur); H.outT = Math.min(+o.outT||H.dur, H.dur); $('#titleIn').value = o.title||''; } }catch(e){} }
+    autoAssign(); renderEditor();
+    if(saved) $('#markHint').textContent = 'Restored the sounds you marked last time for this clip.';
+  };
+  edVideo.onerror = () => edError('This browser can’t play that video. An MP4 (H.264 video with AAC sound) works on every device.');
+  // decode the sound in the background so it's ready when you send
+  file.arrayBuffer().then(decode).then(b => { if(H.file===file) H.audio = b; renderEditor(); })
+    .catch(() => { if(H.file===file) edError('This video’s sound can’t be read in this browser. Try an MP4 with AAC sound, or open the game in Chrome.'); });
+}
+function edError(t){ const e = $('#edErr'); e.textContent = t; e.hidden = false; }
+function saveScene(){ if(!H.file) return; store.set('fp-scene:' + H.file.name + ':' + H.file.size, JSON.stringify({inT:H.inT, outT:H.outT, title:$('#titleIn').value, segs:H.segs.map(s=>({a:s.a,b:s.b,note:s.note,stemLabel:s.stem>=0&&H.stems[s.stem]?H.stems[s.stem].label:''}))})); }
+function voicers(){
+  const host = $('#hostVoices').checked;
+  return peers.filter(p => p.presence && p.presence.name && (host || p.peer!==me)).map(p=>p.peer).sort((a,b)=> a===me ? 1 : b===me ? -1 : (a<b?-1:1));
+}
+function autoAssign(){ const v = voicers(); H.segs.forEach((s,i)=>{ s.who = v.length ? v[i % v.length] : null; }); }
+function fixAssignments(){ const v = voicers(); let k = 0; for(const s of H.segs) if(!s.who || !v.includes(s.who)) s.who = v.length ? v[(k++) % v.length] : null; }
+function renderEditor(){
+  if(!isHost() || !H.file) return;
+  fixAssignments();
+  H.segs.sort((x,y)=>x.a-y.a);
+  const tl = $('#timeline'), D = H.dur || 1, pct = t => (100*t/D).toFixed(3)+'%';
+  tl.innerHTML = `<div class="scene" style="left:${pct(H.inT)};width:${pct(H.outT-H.inT)}"></div>` +
+    H.segs.map((s,i)=>s.stem<0 ? `<div class="seg" style="left:${pct(s.a)};width:${pct(s.b-s.a)}">${i+1}</div>` : '').join('') +
+    (H.pendingA!=null && H.lane<0 ? `<div class="pending" style="left:${pct(H.pendingA)}"></div>` : '') + `<div class="head lanehead"></div>`;
+  $('#mixLane').classList.toggle('sel', H.lane<0);
+  renderLanes();
+  $('#segCount').textContent = H.segs.length;
+  const v = voicers();
+  const list = $('#seglist');
+  list.innerHTML = H.segs.length ? '' : '<p class="hint">No sounds marked yet.</p>';
+  H.segs.forEach((s,i) => {
+    const row = document.createElement('div'); row.className = 'segrow';
+    row.innerHTML = `<span class="n">${i+1}</span>
+      <span class="t"><input type="number" step="0.1" min="0" value="${s.a.toFixed(1)}" aria-label="Sound ${i+1} start">–<input type="number" step="0.1" min="0" value="${s.b.toFixed(1)}" aria-label="Sound ${i+1} end"></span>
+      <select class="part" aria-label="Which part sound ${i+1} comes from"><option value="-1">Full mix</option>${H.stems.map((st,k)=>`<option value="${k}"${k===s.stem?' selected':''}>${esc(st.label)}</option>`).join('')}</select>
+      <select class="who" aria-label="Who voices sound ${i+1}">${v.map(p=>`<option value="${esc(p)}"${p===s.who?' selected':''}>${esc(nameOf(p))}${p===me?' (you)':''}</option>`).join('') || '<option>Nobody here yet</option>'}</select>
+      <input class="note-in" maxlength="80" placeholder="Tip for the player (optional), e.g. just the punch" value="${esc(s.note||'')}" aria-label="Tip for sound ${i+1}">
+      <span class="row" style="gap:4px;flex-wrap:nowrap"><button class="iconbtn" type="button" title="Preview">▶︎</button><button class="iconbtn" type="button" title="Remove">✕</button></span>`;
+    const partSel = row.querySelector('.part'); partSel.onchange = () => { s.stem = +partSel.value; renderEditor(); saveScene(); };
+    const [ia, ib] = row.querySelectorAll('.t input'), sel = row.querySelector('select.who'), note = row.querySelector('.note-in'), [pv, rm] = row.querySelectorAll('.iconbtn');
+    ia.onchange = () => { s.a = Math.max(0, Math.min(+ia.value||0, s.b - MIN_SEG)); clampSeg(s); renderEditor(); saveScene(); };
+    ib.onchange = () => { s.b = Math.min(H.dur, Math.max(+ib.value||0, s.a + MIN_SEG)); clampSeg(s); renderEditor(); saveScene(); };
+    sel.onchange = () => { s.who = sel.value; };
+    note.oninput = () => { s.note = note.value.slice(0,80); saveScene(); };
+    pv.onclick = () => previewRange(s.a, s.b);
+    rm.onclick = () => { H.segs.splice(i,1); renderEditor(); saveScene(); };
+    list.append(row);
+  });
+  const problems = [];
+  if(!H.segs.length) problems.push('Mark at least one sound.');
+  if(!v.length) problems.push('Wait for players to join.');
+  if(!H.audio) problems.push('Reading the video’s sound…');
+  $('#sendBtn').disabled = !!problems.length || H.uploading;
+  $('#sendHint').textContent = problems.join(' ') || `${H.segs.length} sound${H.segs.length>1?'s':''} for ${new Set(H.segs.map(s=>s.who)).size} player${new Set(H.segs.map(s=>s.who)).size>1?'s':''}.`;
+  const laneName = H.lane>=0 && H.stems[H.lane] ? H.stems[H.lane].label : 'full mix';
+  $('#markBtn').textContent = H.pendingA==null ? `● Start a sound here (${laneName})` : `■ End the sound here (started ${fmt(H.pendingA)})`;
+}
+function clampSeg(s){ if(s.b - s.a > MAX_SEG) s.b = s.a + MAX_SEG; if(s.b - s.a < MIN_SEG) s.b = s.a + MIN_SEG; s.b = Math.min(s.b, H.dur); }
+let previewStop = null;
+function previewRange(a, b){
+  edVideo.currentTime = a; edVideo.play().catch(()=>{});
+  previewStop = b;
+}
+edVideo.addEventListener('timeupdate', () => { if(previewStop!=null && edVideo.currentTime >= previewStop){ edVideo.pause(); previewStop = null; } });
+function edTick(){
+  if(H.file && !$('#editor').hidden){
+    $('#edTime').textContent = fmt(edVideo.currentTime) + ' / ' + fmt(H.dur);
+    const hl = (100*edVideo.currentTime/(H.dur||1)) + '%'; document.querySelectorAll('.lanehead').forEach(h => h.style.left = hl);
+    $('#edPlay').textContent = edVideo.paused ? '▶︎ Play' : '❚❚ Pause';
+  }
+  requestAnimationFrame(edTick);
+}
+requestAnimationFrame(edTick);
+$('#fileIn').onchange = e => hostLoadFile(e.target.files[0]);
+$('#edPlay').onclick = () => { previewStop = null; edVideo.paused ? edVideo.play().catch(()=>{}) : edVideo.pause(); };
+$('#edBack').onclick = () => { edVideo.currentTime = Math.max(0, edVideo.currentTime - 0.1); };
+$('#edFwd').onclick = () => { edVideo.currentTime = Math.min(H.dur, edVideo.currentTime + 0.1); };
+$('#sceneInBtn').onclick = () => { H.inT = Math.min(edVideo.currentTime, H.outT - 1); renderEditor(); saveScene(); };
+$('#sceneOutBtn').onclick = () => { H.outT = Math.max(edVideo.currentTime, H.inT + 1); renderEditor(); saveScene(); };
+$('#markBtn').onclick = () => {
+  const t = edVideo.currentTime;
+  if(H.pendingA==null){ H.pendingA = t; H.pendingLane = H.lane; }
+  else {
+    let a = Math.min(H.pendingA, t), b = Math.max(H.pendingA, t);
+    if(b - a < MIN_SEG) b = a + 1.0;
+    const s = {a, b, note:'', who:null, stem:H.lane}; clampSeg(s);
+    H.segs.push(s); H.pendingA = null;
+    const v = voicers(); const counts = {}; H.segs.forEach(x=>{ if(x.who) counts[x.who]=(counts[x.who]||0)+1; });
+    s.who = v.slice().sort((x,y)=>(counts[x]||0)-(counts[y]||0))[0] || null;
+    saveScene();
+  }
+  renderEditor();
+};
+function laneSeek(el, lane, e){
+  H.lane = lane; if(H.pendingA!=null && lane!==H.pendingLane) H.pendingA = null; H.pendingLane = lane;
+  const r = el.getBoundingClientRect();
+  const seek = ev => { edVideo.currentTime = Math.max(0, Math.min(H.dur, (ev.clientX - r.left) / r.width * H.dur)); };
+  seek(e); el.setPointerCapture(e.pointerId);
+  document.querySelectorAll('#lanes .lane').forEach((r,i) => r.classList.toggle('sel', i===lane));
+  $('#mixLane').classList.toggle('sel', lane<0);
+  const mv = ev => seek(ev), up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); renderEditor(); };
+  el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up);
+}
+const peakCache = new WeakMap();
+function renderLanes(){
+  const box = $('#lanes'), D = H.dur || 1, pct = t => (100*t/D).toFixed(3)+'%';
+  box.innerHTML = '';
+  H.stems.forEach((st, k) => {
+    const row = document.createElement('div'); row.className = 'lane' + (H.lane===k ? ' sel' : '');
+    const segs = H.segs.map((s,i)=>({s,i})).filter(o=>o.s.stem===k);
+    row.innerHTML = `<div><input value="${esc(st.label)}" maxlength="24" aria-label="Part name"><span class="meta">${st.quick ? 'quick split' : (Math.abs(st.t0) > 0.005 ? `lined up ${st.t0>0?'+':''}${st.t0.toFixed(2)} s` : 'lined up')}</span></div>
+      <div class="timeline"><canvas width="1200" height="88"></canvas>${segs.map(o=>`<div class="seg" style="left:${pct(o.s.a)};width:${pct(o.s.b-o.s.a)}">${o.i+1}</div>`).join('')}${H.pendingA!=null && H.lane===k ? `<div class="pending" style="left:${pct(H.pendingA)}"></div>` : ''}<div class="head lanehead"></div></div>
+      <span class="row" style="gap:4px;flex-wrap:nowrap"><button class="iconbtn" type="button" title="Listen to this part">🎧</button><button class="iconbtn" type="button" title="Remove this part">✕</button></span>`;
+    const name = row.querySelector('input'), tl = row.querySelector('.timeline'), cv = row.querySelector('canvas'), [solo, rm] = row.querySelectorAll('.iconbtn');
+    name.onchange = () => { st.label = name.value.trim().slice(0,24) || 'Part'; renderEditor(); saveScene(); };
+    tl.addEventListener('pointerdown', e => laneSeek(tl, k, e));
+    solo.onclick = () => { H.hear = H.hear===k ? -1 : k; renderHear(); edSyncPart(); };
+    solo.classList.toggle('on', H.hear===k);
+    rm.onclick = () => { H.stems.splice(k,1); H.segs.forEach(s=>{ if(s.stem===k) s.stem=-1; else if(s.stem>k) s.stem--; }); if(H.lane>=H.stems.length) H.lane=-1; if(H.hear>=H.stems.length){ H.hear=-1; edSyncPart(); } renderHear(); renderEditor(); };
+    // waveform
+    let pk = peakCache.get(st.buf);
+    if(!pk){ pk = peaks(st.buf.getChannelData(0), 1200); peakCache.set(st.buf, pk); }
+    const g = cv.getContext('2d'), css = getComputedStyle(document.documentElement);
+    g.fillStyle = css.getPropertyValue('--muted'); g.globalAlpha = .7;
+    const bufDur = st.buf.duration;
+    let mx = 0; for(const v of pk) mx = Math.max(mx, v); mx = mx || 1;
+    for(let i=0;i<pk.length;i++){ const t = st.t0 + (i/pk.length)*bufDur; const x = t/D*1200; if(x<0||x>1200) continue; const h = Math.max(1, pk[i]/mx*40); g.fillRect(x, 44-h, Math.max(1, 1200/pk.length*bufDur/D), h*2); }
+    box.append(row);
+  });
+}
+function renderHear(){
+  $('#hearRow').hidden = !H.stems.length;
+  const sel = $('#hearSel');
+  sel.innerHTML = `<option value="-1">Full mix</option>` + H.stems.map((st,k)=>`<option value="${k}"${k===H.hear?' selected':''}>${esc(st.label)} only</option>`).join('');
+  sel.value = String(H.hear);
+}
+$('#hearSel').onchange = () => { H.hear = +$('#hearSel').value; edSyncPart(); renderEditor(); };
+// play one part in step with the editor video
+let edSrc = null;
+function edStopPart(){ if(edSrc){ try{ edSrc.stop(); }catch(e){} edSrc = null; } }
+function edSyncPart(){
+  edStopPart();
+  const st = H.hear>=0 ? H.stems[H.hear] : null;
+  edVideo.muted = !!st;
+  if(!st || edVideo.paused) return;
+  const ac = ctx(); ac.resume();
+  const off = edVideo.currentTime - st.t0, src = ac.createBufferSource(); src.buffer = st.buf; src.connect(ac.destination);
+  if(off >= 0){ if(off < st.buf.duration) src.start(ac.currentTime, off); } else src.start(ac.currentTime - off, 0);
+  edSrc = src;
+}
+['playing','seeked'].forEach(ev => edVideo.addEventListener(ev, () => { if(H.hear>=0) edSyncPart(); }));
+['pause','ended','seeking'].forEach(ev => edVideo.addEventListener(ev, edStopPart));
+
+function addPart(buf, label, t0, quick){
+  H.stems.push({buf, label, t0, quick:!!quick});
+  const k = H.stems.length - 1;
+  H.segs.forEach(s => { if(s.stem<0 && s.stemLabel && s.stemLabel===label) s.stem = k; });
+  renderHear(); renderEditor();
+}
+$('#stemIn').onchange = async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  const st = $('#partStatus');
+  for(const f of files){
+    if(H.stems.length >= 6){ st.textContent = 'Up to 6 parts per scene.'; break; }
+    st.textContent = `Reading ${f.name}…`;
+    try{
+      const buf = await decode(await f.arrayBuffer());
+      let t0 = 0;
+      if(H.audio){ st.textContent = `Lining up ${f.name}…`; await yieldUI(); t0 = alignPart(H.audio.getChannelData(0), H.audio.sampleRate, buf.getChannelData(0), buf.sampleRate); if(Math.abs(t0) < 0.05) t0 = 0; /* tiny shifts are just noise in the matching */ }
+      addPart(buf, partName(f), t0, false);
+      st.textContent = `Added ${f.name}.`;
+    }catch(err){ st.textContent = `Couldn\u2019t read ${f.name}. Use WAV, MP3, FLAC or M4A.`; }
+  }
+};
+$('#quickSplit').onclick = async () => {
+  if(!H.audio || H.splitting) return;
+  const len = H.outT - H.inT;
+  if(len > 180){ $('#partStatus').textContent = 'Quick split works on up to 3 minutes. Set the scene start and end first.'; return; }
+  H.splitting = true; $('#quickSplit').disabled = true;
+  const st = $('#partStatus');
+  try{
+    st.textContent = 'Splitting… 0%';
+    const mono = await toMono(H.audio, H.inT, H.outT, 22050);
+    const r = await hpss(mono, f => { st.textContent = `Splitting… ${Math.round(f*100)}%`; });
+    H.stems = H.stems.filter(x => !x.quick);
+    addPart(bufferFrom(r.perc, 22050), 'Hits & bangs', H.inT, true);
+    addPart(bufferFrom(r.harm, 22050), 'Tones & voices', H.inT, true);
+    st.textContent = 'Split into "Hits & bangs" and "Tones & voices" for the scene. Click a lane to mark sounds on that part.';
+  }catch(err){ st.textContent = 'Quick split failed: ' + (err.message || err); }
+  finally{ H.splitting = false; $('#quickSplit').disabled = false; }
+};
+$('#mixLane').addEventListener('pointerdown', e => { if(e.target.closest('#timeline')) return; H.lane = -1; renderEditor(); });
+$('#timeline').addEventListener('pointerdown', e => { if(H.lane!==-1){ if(H.pendingA!=null) H.pendingA = null; H.lane = -1; H.pendingLane = -1; document.querySelectorAll('#lanes .lane').forEach(r => r.classList.remove('sel')); $('#mixLane').classList.add('sel'); setTimeout(renderEditor, 0); } });
+$('#timeline').addEventListener('pointerdown', e => {
+  const r = $('#timeline').getBoundingClientRect();
+  const seek = ev => { edVideo.currentTime = Math.max(0, Math.min(H.dur, (ev.clientX - r.left) / r.width * H.dur)); };
+  seek(e); $('#timeline').setPointerCapture(e.pointerId);
+  const mv = ev => seek(ev), up = () => { $('#timeline').removeEventListener('pointermove', mv); $('#timeline').removeEventListener('pointerup', up); };
+  $('#timeline').addEventListener('pointermove', mv); $('#timeline').addEventListener('pointerup', up);
+});
+$('#hostVoices').onchange = () => { autoAssign(); renderEditor(); };
+$('#autoAssign').onclick = () => { autoAssign(); renderEditor(); };
+$('#titleIn').oninput = () => saveScene();
+
+async function sendToPlayers(){
+  if(!isHost() || !H.audio || !H.segs.length || H.uploading) return;
+  H.uploading = true; $('#edErr').hidden = true; renderEditor();
+  const prog = $('#sendProg'), bar = $('#sendBar'), step = $('#sendStep');
+  prog.hidden = false;
+  try{
+    const segs = [];
+    for(let i=0;i<H.segs.length;i++){
+      const s = H.segs[i];
+      step.textContent = `Cutting sound ${i+1} of ${H.segs.length}…`; bar.style.width = (60*i/H.segs.length)+'%';
+      const part = s.stem>=0 ? H.stems[s.stem] : null;
+      const mono = part ? await toMono(part.buf, s.a - part.t0, s.b - part.t0, 22050) : await toMono(H.audio, s.a, s.b, 22050);
+      const r = await upload(encodeWAV(mono, 22050), 'audio');
+      segs.push({a:+s.a.toFixed(3), b:+s.b.toFixed(3), who:s.who, note:s.note||'', snip:r.id, stem:part ? s.stem : -1, part:part ? part.label : ''});
+    }
+    H.title = $('#titleIn').value.trim().slice(0,80);
+    S.phase = 'record'; S.segs = segs; S.takes = {}; S.video = null; S.stems = []; S.title = ''; S.inT = H.inT; S.outT = H.outT; S.play = {n:0};
+    commit(); studio.reset(); render();
+    step.textContent = 'Sounds sent. Uploading the video for the reveal…';
+    // the video goes up hidden; the server won't hand it out until you reveal
+    // each part, trimmed to the scene, also goes up hidden
+    const stems = []; H.stemKeys = [];
+    for(let k=0;k<H.stems.length;k++){
+      const st = H.stems[k];
+      $('#vidStep').textContent = `Uploading sound part ${k+1} of ${H.stems.length}…`;
+      const mono = await toMono(st.buf, H.inT - st.t0, H.outT - st.t0, 32000);
+      const r = await upload(encodeWAV(mono, 32000), 'stem');
+      stems.push({id:r.id, label:st.label, t0:H.inT}); H.stemKeys.push({id:r.id, key:r.key});
+    }
+    const r = await upload(H.file, 'video', f => { const pct = Math.round(f*100); $('#vidBar').style.width = pct+'%'; $('#vidStep').textContent = `Uploading the video for the reveal… ${pct}%`; bar.style.width = (60 + 40*f)+'%'; });
+    H.key = r.key; H.videoId = r.id;
+    if(S.phase==='record'){ S.stems = stems; S.video = {id:r.id}; commit(); }
+    $('#vidStep').textContent = 'Video ready for the reveal.'; bar.style.width = '100%';
+  }catch(err){
+    edError(err.message || 'Something went wrong while sending. Try again.');
+    $('#vidStep').textContent = 'Video upload failed: ' + (err.message||'') + ' Go back to setup and send again.';
+  }finally{ H.uploading = false; prog.hidden = true; renderEditor(); render(); }
+}
+$('#sendBtn').onclick = sendToPlayers;
+
+function reveal(){
+  if(!isHost() || S.phase!=='record' || !S.video) return;
+  room.raw({t:'unhide', id:S.video.id, key:H.key});
+  H.stemKeys.forEach(x => room.raw({t:'unhide', id:x.id, key:x.key}));
+  setTimeout(() => { S.phase = 'reveal'; S.title = H.title; S.play = {n:0}; commit(); screening.onState(null); render(); }, 300);
+}
+$('#revealBtn').onclick = reveal;
+$('#newSceneBtn').onclick = () => { if(!isHost()) return; screening.reset(); const keep = S.v; S = newState(me); S.v = keep+1; commit(); studio.reset(); render(); renderEditor(); };
+$('#claimBtn').onclick = () => room.emit('claim', {});
+function onClaim(msg){
+  if(!S || S.phase!=='lobby') return;
+  if(isHost() && msg.peer!==me && !H.uploading){ S.host = msg.peer; commit(); render(); }
+}
+
+// ================= players: recording studio =================
+const studio = {
+  cards: {},   // seg index -> local take data
+  key: '',
+  reset(){ for(const k in this.cards) this.cards[k].stopAll && this.cards[k].stopAll(); this.cards = {}; this.key = ''; $('#clips').innerHTML = ''; },
+  mine(){ return S ? S.segs.map((s,i)=>({...s, i})).filter(s=>s.who===me) : []; },
+  render(){
+    const mine = this.mine();
+    const k = mine.map(s=>s.i+':'+s.snip).join('|');
+    if(k !== this.key){ this.reset(); this.key = k; mine.forEach((s,n)=>this.build(s, n, mine.length)); }
+    for(const s of mine){ const c = this.cards[s.i]; if(c) c.refresh(); }
+    $('#noClips').hidden = mine.length > 0 || isHost();
+    $('#recHead').hidden = mine.length === 0;
+  },
+  build(seg, n, total){
+    const el = document.createElement('div'); el.className = 'clip';
+    const len = seg.b - seg.a;
+    el.innerHTML = `<h4><span>Sound ${n+1} of ${total} ${seg.part ? `<span class="partbadge">${esc(seg.part)}</span>` : ''}</span><span class="mono" style="font-size:14px">${len.toFixed(1)} s</span></h4>
+      ${seg.note ? `<div class="note"><b>Tip:</b> ${esc(seg.note)}</div>` : ''}
+      <div class="row"><button class="btn ghost" data-a="listen" type="button">▶︎ Listen</button><button class="recbtn" data-a="rec" type="button">Record</button><span class="hint" data-s="status">Loading the sound…</span></div>
+      <div class="waves"><canvas width="1200" height="300"></canvas><div class="cd" hidden></div></div>
+      <div class="legend"><span><i style="background:var(--wave)"></i>Original</span><span><i style="background:var(--wave2)"></i>Your take (drag it to move it)</span></div>
+      <div data-s="adjust" hidden>
+        <div class="offset"><span class="lbl">Timing</span><input type="range" min="${-MAX_OFF}" max="${MAX_OFF}" step="0.01" value="0" aria-label="Timing offset"><span class="mono" data-s="off">0.00 s</span></div>
+        <div class="row" style="margin-top:8px">
+          <button class="iconbtn" data-a="earlier" type="button">◀ 0.05 s earlier</button>
+          <button class="iconbtn" data-a="later" type="button">0.05 s later ▶</button>
+          <button class="tbtn" data-a="auto" type="button">✨ Auto-match timing</button>
+          <span class="lbl" style="margin-left:6px">Volume</span><input type="range" data-s="gain" min="0.3" max="2.5" step="0.05" value="1" style="width:110px;accent-color:var(--accent)" aria-label="Take volume">
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost" data-a="both" type="button">▶︎ Hear both together</button>
+          <button class="btn ghost" data-a="mine" type="button">▶︎ Only mine</button>
+          <button class="btn" data-a="submit" type="button">Send this take</button>
+        </div>
+      </div>`;
+    $('#clips').append(el);
+    const q = s => el.querySelector(s);
+    const cv = q('canvas'), cd = q('.cd'), st = q('[data-s=status]'), adj = q('[data-s=adjust]'), range = q('input[type=range]'), offOut = q('[data-s=off]'), gainIn = q('[data-s=gain]');
+    const c = { seg, el, snip:null, snipData:null, take:null, takeRate:0, off:0, gain:1, sent:false, sending:false, rec:null, playing:[], head:null };
+    this.cards[seg.i] = c;
+    const wavePeaks = {};
+    function draw(){
+      const g = cv.getContext('2d'), W = cv.width, Hh = cv.height, mid = Hh/2;
+      const css = getComputedStyle(document.documentElement);
+      g.clearRect(0,0,W,Hh);
+      const span = len + PRE + TAIL + 0.6, t0 = -PRE - 0.3;   // seconds shown, left edge time
+      const X = t => (t - t0) / span * W;
+      g.fillStyle = css.getPropertyValue('--line'); g.fillRect(X(0), 0, 1.5, Hh); g.fillRect(X(len), 0, 1.5, Hh);
+      if(c.snipData){
+        if(!wavePeaks.o) wavePeaks.o = peaks(c.snipData, Math.max(10, Math.round(X(len)-X(0))));
+        g.fillStyle = css.getPropertyValue('--wave'); g.globalAlpha = .55;
+        const p = wavePeaks.o, x0 = X(0), w = (X(len)-X(0))/p.length;
+        for(let i=0;i<p.length;i++){ const h = Math.max(1, p[i]*mid*0.92); g.fillRect(x0+i*w, mid-h, Math.max(1,w), h*2); }
+        g.globalAlpha = 1;
+      }
+      if(c.take){
+        const tl = c.take.length / c.takeRate;
+        if(!wavePeaks.t || wavePeaks.tk!==c.take){ wavePeaks.t = peaks(c.take, Math.max(10, Math.round(X(tl)-X(0)))); wavePeaks.tk = c.take; }
+        g.fillStyle = css.getPropertyValue('--wave2'); g.globalAlpha = .75;
+        const p = wavePeaks.t, x0 = X(-PRE + c.off), w = (X(tl)-X(0))/p.length;
+        for(let i=0;i<p.length;i++){ const h = Math.max(1, p[i]*c.gain*mid*0.8); g.fillRect(x0+i*w, mid-h*0.85, Math.max(1,w), h*1.7); }
+        g.globalAlpha = 1;
+      }
+      if(c.head!=null){ g.fillStyle = css.getPropertyValue('--accent'); g.fillRect(X(c.head), 0, 3, Hh); }
+    }
+    c.draw = draw;
+    c.stopAll = () => { c.playing.forEach(s=>{ try{s.stop();}catch(e){} }); c.playing = []; c.head = null; };
+    function animateHead(startCtx, from, to){
+      const tick = () => { const t = from + (ctx().currentTime - startCtx); if(t > to || !c.playing.length){ c.head = null; draw(); return; } c.head = t; draw(); requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
+    function setStatus(t){ st.textContent = t; }
+    c.refresh = () => {
+      const t = S.takes && S.takes[seg.i];
+      c.sent = !!(t && t.by===me);
+      el.classList.toggle('done', c.sent && !c.dirty);
+      if(c.sending) return;
+      if(c.rec) return;
+      if(!c.snip) return;
+      if(c.sent && !c.dirty) setStatus('Sent ✓ You can still re-record or adjust and send again.');
+      else if(c.take) setStatus(c.sent ? 'Changed since you sent it. Send again to update.' : 'Line it up, then send it.');
+      else setStatus('Listen as many times as you like, then record.');
+      q('[data-a=submit]').textContent = c.sent ? (c.dirty ? 'Send update' : 'Sent ✓') : 'Send this take';
+      q('[data-a=submit]').disabled = c.sent && !c.dirty;
+    };
+    // load the snippet
+    download(seg.snip).then(r => decode(r.buf)).then(buf => {
+      c.snip = buf; c.snipData = buf.getChannelData(0); draw(); c.refresh();
+    }).catch(err => setStatus('Couldn’t load this sound: ' + err.message));
+
+    q('[data-a=listen]').onclick = async () => {
+      if(!c.snip || c.rec) return; await ctx().resume(); c.stopAll();
+      const t = ctx().currentTime + 0.05; c.playing = [playBuf(c.snip, t)]; animateHead(t, 0, len);
+      c.playing[0].onended = () => { c.playing = []; };
+    };
+    q('[data-a=rec]').onclick = () => c.rec ? stopRec() : startRec();
+    async function startRec(){
+      if(!c.snip || c.starting) return;
+      c.starting = true;
+      Object.values(studio.cards).forEach(o => o!==c && o.rec && o.stopRec && o.stopRec(true));
+      c.stopAll();
+      let stream;
+      try{ stream = await getMic(); }catch(err){ c.starting = false; setStatus('Microphone blocked. Allow microphone access in your browser settings and try again.'); return; }
+      const ac = ctx(); await ac.resume();
+      const src = ac.createMediaStreamSource(stream);
+      const proc = ac.createScriptProcessor(4096, 1, 1), sink = ac.createGain(); sink.gain.value = 0;
+      const chunks = []; let got = 0;
+      proc.onaudioprocess = e => { const d = e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(d)); got += d.length; };
+      src.connect(proc); proc.connect(sink); sink.connect(ac.destination);
+      const recStart = ac.currentTime;
+      const go = recStart + 2.2;
+      [go-1.8, go-1.2, go-0.6].forEach((t,k)=>beep(t, 660));
+      if($('#monitor').checked) c.playing = [playBuf(c.snip, go)];
+      const end = go + len + TAIL;
+      c.rec = { stop:false }; c.starting = false;
+      const btn = q('[data-a=rec]'); btn.textContent = 'Stop'; btn.classList.add('stop');
+      setStatus('Get ready…');
+      cd.hidden = false;
+      const tick = () => {
+        if(!c.rec) return;
+        const now = ac.currentTime;
+        if(now < go){ cd.textContent = String(Math.min(3, Math.ceil((go - now)/0.6))); }
+        else { cd.hidden = true; c.head = now - go; draw(); setStatus('Recording… copy the sound!'); }
+        if(now >= end || c.rec.stop) return finish();
+        requestAnimationFrame(tick);
+      };
+      function finish(){
+        const cancelled = c.rec && c.rec.cancel;
+        try{ src.disconnect(); proc.disconnect(); sink.disconnect(); }catch(e){}
+        c.rec = null; cd.hidden = true; c.head = null; btn.textContent = 'Record again'; btn.classList.remove('stop');
+        c.stopAll();
+        if(cancelled){ c.refresh(); draw(); return; }
+        const all = new Float32Array(got); let o = 0; for(const ch of chunks){ all.set(ch, o); o += ch.length; }
+        const rate = ac.sampleRate, from = Math.max(0, Math.round((go - PRE - recStart) * rate));
+        const take = all.slice(from, from + Math.round((PRE + len + TAIL) * rate));
+        if(take.length < rate * 0.3){ setStatus('That take was too short. Try again.'); c.refresh(); return; }
+        c.take = take; c.takeRate = rate; c.off = 0; c.dirty = true; range.value = 0; offOut.textContent = '0.00 s';
+        adj.hidden = false; draw(); c.refresh();
+        // suggest timing straight away
+        const m = autoOffset(c.snipData, c.snip.sampleRate, c.take, c.takeRate);
+        c.off = m.off; range.value = c.off; offOut.textContent = (c.off>=0?'+':'') + c.off.toFixed(2) + ' s'; draw();
+        setStatus(m.sure ? 'Auto-matched the timing. Hear both together to check, and drag your take if it’s off.' : 'Couldn’t find a clear match, so the timing is as you recorded it. Hear both together and drag your take to line it up.');
+      }
+      c.stopRec = (cancel) => { if(c.rec){ c.rec.stop = true; c.rec.cancel = !!cancel; } };
+      requestAnimationFrame(tick);
+    }
+    function stopRec(){ c.stopRec && c.stopRec(false); }
+    function setOff(v){ c.off = Math.max(-MAX_OFF, Math.min(MAX_OFF, Math.round(v*100)/100)); range.value = c.off; offOut.textContent = (c.off>=0?'+':'') + c.off.toFixed(2) + ' s'; c.dirty = true; c.refresh(); draw(); }
+    range.oninput = () => setOff(+range.value);
+    q('[data-a=earlier]').onclick = () => setOff(c.off - 0.05);
+    q('[data-a=later]').onclick = () => setOff(c.off + 0.05);
+    q('[data-a=auto]').onclick = () => { if(!c.take) return; const m = autoOffset(c.snipData, c.snip.sampleRate, c.take, c.takeRate);
+      if(m.sure){ setOff(m.off); setStatus('Auto-matched. Hear both together to check.'); } else setStatus('Couldn’t find a clear match. Drag your take or use the slider to line it up.'); };
+    gainIn.oninput = () => { c.gain = +gainIn.value; c.dirty = true; c.refresh(); draw(); };
+    q('[data-a=both]').onclick = async () => playPreview(true);
+    q('[data-a=mine]').onclick = async () => playPreview(false);
+    async function playPreview(both){
+      if(!c.take || c.rec) return; await ctx().resume(); c.stopAll();
+      const t = ctx().currentTime + 0.1, tb = bufferFrom(c.take, c.takeRate);
+      const startAt = t + (-PRE + c.off);   // take time 0 sits PRE before "go"
+      const list = [];
+      if(both) list.push(playBuf(c.snip, t, 0.8));
+      if(startAt >= ctx().currentTime) list.push(playBuf(tb, startAt, c.gain)); else list.push(playBuf(tb, ctx().currentTime, c.gain, ctx().currentTime - startAt));
+      c.playing = list; animateHead(t, 0, len + TAIL);
+      list[list.length-1].onended = () => { c.playing = []; };
+    }
+    // drag the take on the waveform to move it
+    cv.addEventListener('pointerdown', e => {
+      if(!c.take || c.rec) return;
+      const r = cv.getBoundingClientRect(), span = len + PRE + TAIL + 0.6, x0 = e.clientX, o0 = c.off;
+      cv.setPointerCapture(e.pointerId);
+      const mv = ev => setOff(o0 + (ev.clientX - x0) / r.width * span);
+      const up = () => { cv.removeEventListener('pointermove', mv); cv.removeEventListener('pointerup', up); };
+      cv.addEventListener('pointermove', mv); cv.addEventListener('pointerup', up);
+    });
+    q('[data-a=submit]').onclick = async () => {
+      if(!c.take || c.sending) return;
+      c.sending = true; setStatus('Sending…'); q('[data-a=submit]').disabled = true;
+      try{
+        const mono = await resample(c.take, c.takeRate, 22050);
+        const r = await upload(encodeWAV(mono, 22050), 'audio');
+        room.emit('take', {i:seg.i, id:r.id, off:c.off, gain:c.gain});
+        c.dirty = false; c.pendingId = r.id;
+        setStatus('Sent ✓');
+      }catch(err){ setStatus('Couldn’t send: ' + err.message + ' Try again.'); }
+      finally{ c.sending = false; c.refresh(); }
+    };
+    draw(); c.refresh();
+  }
+};
+async function resample(data, from, to){
+  if(from === to) return data;
+  const OC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const oc = new OC(1, Math.max(1, Math.round(data.length * to / from)), to);
+  const b = oc.createBuffer(1, data.length, from); b.getChannelData(0).set(data);
+  const s = oc.createBufferSource(); s.buffer = b; s.connect(oc.destination); s.start();
+  return (await oc.startRendering()).getChannelData(0);
+}
+let micStream = null;
+async function getMic(){
+  if(micStream && micStream.getAudioTracks().some(t=>t.readyState==='live')) return micStream;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no mic');
+  micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:false, autoGainControl:true}});
+  return micStream;
+}
+$('#micTestBtn').onclick = async () => {
+  const out = $('#micTestOut');
+  try{
+    const s = await getMic(), ac = ctx(); await ac.resume();
+    const src = ac.createMediaStreamSource(s), an = ac.createAnalyser(); an.fftSize = 1024; src.connect(an);
+    const d = new Float32Array(an.fftSize); let peak = 0; const t0 = performance.now();
+    out.textContent = 'Make a noise…';
+    const tick = () => { an.getFloatTimeDomainData(d); for(const v of d) peak = Math.max(peak, Math.abs(v));
+      if(performance.now()-t0 < 3000){ out.textContent = 'Make a noise… ' + '▮'.repeat(Math.min(20, Math.round(peak*40))); requestAnimationFrame(tick); }
+      else { src.disconnect(); out.textContent = peak > 0.05 ? 'Your microphone works.' : 'Very quiet. Check the right microphone is selected.'; } };
+    tick();
+  }catch(e){ out.textContent = 'Microphone blocked. Allow it in your browser settings.'; }
+};
+function onTake(msg){
+  if(!isHost() || !S || S.phase!=='record') return;
+  const d = msg.data; if(!d || typeof d!=='object') return;
+  const i = d.i|0, seg = S.segs[i];
+  if(!seg || seg.who!==msg.peer || typeof d.id!=='string' || !/^[a-f0-9]{16}$/.test(d.id)) return;
+  S.takes[i] = { id:d.id, off:Math.max(-MAX_OFF, Math.min(MAX_OFF, +d.off||0)), gain:Math.max(0.3, Math.min(2.5, +d.gain||1)), by:msg.peer };
+  commit();
+}
+
+// ================= screening room =================
+const scVideo = $('#scVideo');
+const screening = {
+  seated:false, loading:false, ready:false, vid:null, origBuf:null, takes:{}, playN:0, sources:[], capTimer:null, url:null, err:'',
+  reset(){ this.stop(); if(this.url && !(H.url && this.url===H.url)) URL.revokeObjectURL(this.url); this.seated = false; this.loading = false; this.ready = false; this.vid = null; this.origBuf = null; this.takes = {}; this.parts = []; this.tracksKey = ''; this.playN = 0; this.url = null; this.err = ''; },
+  onState(prev){
+    if(!S || S.phase!=='reveal'){ return; }
+    if(this.vid && S.video && this.vid!==S.video.id) this.reset();
+    if(this.seated && !this.ready && !this.loading) this.load();
+    this.maybePlay();
+    if(S.play && S.play.stop && S.play.n===this.playN) this.stop();
+  },
+  async seat(){
+    // unlock sound with this tap (phones need it); the video is muted, so it can start later without a tap
+    try{ const ac = ctx(); await ac.resume(); const s = ac.createBufferSource(); s.buffer = ac.createBuffer(1, 1, 22050); s.connect(ac.destination); s.start(); }catch(e){}
+    scVideo.muted = true;
+    this.seated = true; $('#seatBtn').hidden = true; this.load(); render();
+  },
+  async load(){
+    if(!S || !S.video || this.loading || this.ready) return;
+    this.loading = true; this.err = '';
+    const vidId = S.video.id; this.vid = vidId;
+    try{
+      let buf, type;
+      if(isHost() && H.file && H.videoId===vidId){ buf = await H.file.arrayBuffer(); type = H.file.type; this.url = H.url; this.origBuf = H.audio; }
+      else {
+        let r, tries = 0;
+        while(true){
+          try{ r = await download(vidId, f => { $('#seatStatus').textContent = `Loading the scene… ${Math.round(f*100)}%`; }); break; }
+          catch(e){ if(e.message==='not revealed yet' && tries++ < 10){ await new Promise(z=>setTimeout(z,600)); continue; } throw e; }
+        }
+        buf = r.buf; type = r.type || 'video/mp4';
+        this.url = URL.createObjectURL(new Blob([buf], {type}));
+        try{ this.origBuf = await decode(buf); }catch(e){ this.origBuf = null; }
+      }
+      scVideo.src = this.url;
+      await new Promise(res => { if(scVideo.readyState >= 1) return res(); scVideo.onloadedmetadata = () => res(); setTimeout(res, 8000); });
+      // everyone's takes
+      this.parts = [];
+      for(let k=0;k<(S.stems||[]).length;k++){
+        $('#seatStatus').textContent = `Loading sound parts… ${k+1}/${S.stems.length}`;
+        let r, tries = 0;
+        while(true){ try{ r = await download(S.stems[k].id); break; } catch(e){ if(e.message==='not revealed yet' && tries++ < 10){ await new Promise(z=>setTimeout(z,600)); continue; } r = null; break; } }
+        try{ this.parts[k] = r ? await decode(r.buf) : null; }catch(e){ this.parts[k] = null; }
+      }
+      for(let i=0;i<S.segs.length;i++){
+        const t = S.takes[i]; if(!t) continue;
+        $('#seatStatus').textContent = `Loading the sounds… ${i+1}/${S.segs.length}`;
+        try{ const r = await download(t.id); this.takes[i] = await decode(r.buf); }catch(e){}
+      }
+      scVideo.currentTime = S.inT || 0;
+      this.ready = true; this.loading = false;
+      room.presence({ready: vidId});
+      $('#seatStatus').textContent = 'Ready. Waiting for the host to start the projector.';
+      $('#scTitleSub').textContent = 'Waiting for the host to start…';
+      this.maybePlay();
+    }catch(err){
+      this.loading = false; this.err = err.message || 'Something went wrong.';
+      $('#seatStatus').textContent = 'Couldn’t load the scene: ' + this.err;
+    }
+    render();
+  },
+  maybePlay(){
+    if(!this.ready || !S.play || !S.play.n || S.play.n===this.playN) return;
+    if(S.play.stop || serverNow() - S.play.at > 4000){ this.playN = S.play.n; $('#seatStatus').textContent = 'Ready. You’ll join from the next play.'; return; }
+    this.play();
+  },
+  stop(){
+    this.sources.forEach(s=>{ try{s.stop();}catch(e){} }); this.sources = [];
+    try{ scVideo.pause(); }catch(e){}
+    cancelAnimationFrame(this.capTimer); $('#scCap').hidden = true;
+  },
+  async play(){
+    if(!this.ready || !S.play || !S.play.n) return;
+    const P = S.play; this.playN = P.n; this.stop();
+    if(P.stop) return;
+    const inT = S.inT || 0, outT = S.outT || scVideo.duration || 60;
+    scVideo.currentTime = inT;
+    await new Promise(res => { const done = () => { scVideo.removeEventListener('seeked', done); res(); }; scVideo.addEventListener('seeked', done); setTimeout(done, 1500); });
+    const wait = (P.at - serverNow());
+    $('#scTitle').hidden = false; $('#scTitleText').textContent = P.mode==='orig' ? 'The original' : (S.title || 'Our version');
+    $('#scTitleSub').textContent = P.mode==='orig' ? 'Here’s how it really sounds.' : 'Sound by ' + [...new Set(S.segs.map(s=>s.who))].map(nameOf).join(', ');
+    if(wait > 0) await new Promise(z=>setTimeout(z, wait));
+    if(this.playN !== P.n) return;
+    $('#scTitle').hidden = true; $('#seatStatus').textContent = P.mode==='orig' ? 'Now playing: the original' : 'Now playing: our version';
+    try{ await scVideo.play(); }catch(e){ $('#seatStatus').textContent = 'Tap "Take my seat" again to allow playback.'; $('#seatBtn').hidden = false; return; }
+    const ac = ctx(); await ac.resume();
+    const vt = scVideo.currentTime, t0 = ac.currentTime, at = t => t0 + (t - vt);
+    const stopAt = at(outT);
+    const sched = (buf, t, gain, maxDur) => {
+      if(!buf) return;
+      const g = ac.createGain(); g.gain.value = gain; const s = ac.createBufferSource(); s.buffer = buf; s.connect(g).connect(ac.destination);
+      const when = at(t);
+      if(when >= ac.currentTime) s.start(when, 0); else s.start(ac.currentTime, ac.currentTime - when);
+      try{ s.stop(stopAt); }catch(e){}
+      this.sources.push(s);
+    };
+    const hasParts = (S.stems||[]).length > 0;
+    // the original's tracks: each sound part, or the video's own sound when there are none
+    const tracks = hasParts ? S.stems.map((st,k)=>({buf:this.parts[k], t0:st.t0})) : [{buf:this.origBuf, t0:0}];
+    const window1 = (buf, t0, a, b) => {   // play just a..b of a track
+      if(!buf) return; const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
+      const when = at(a), off = a - t0; if(off < 0 || off >= buf.duration) return;
+      if(when >= ac.currentTime) src.start(when, off, b - a); else if(at(b) > ac.currentTime) src.start(ac.currentTime, off + (ac.currentTime - when), at(b) - ac.currentTime);
+      this.sources.push(src);
+    };
+    if(P.mode==='orig'){ if(this.origBuf) sched(this.origBuf, 0, 1); else tracks.forEach(tr => sched(tr.buf, tr.t0, 1)); }
+    else {
+      const voiced = S.segs.map((seg,i)=>({seg, ok: !!(S.takes[i] && this.takes[i])}));
+      tracks.forEach((tr, k) => {
+        if(!tr.buf) return;
+        const mode = (P.modes && P.modes[k]) || (hasParts ? 'keep' : 'mute');
+        const mine = voiced.filter(v => v.seg.stem===k || v.seg.stem<0 || !hasParts);
+        if(mode==='mute'){
+          // ours only, but fill any sound nobody recorded with the original
+          mine.filter(v => !v.ok && (v.seg.stem===k || !hasParts)).forEach(v => window1(tr.buf, tr.t0, v.seg.a, v.seg.b));
+          return;
+        }
+        const g = ac.createGain(), base = mode==='quiet' ? 0.3 : 1; g.gain.setValueAtTime(base, ac.currentTime); g.connect(ac.destination);
+        if(mode==='keep'){
+          // keep the original part, but go silent wherever one of our sounds replaces it
+          const wins = mine.filter(v => v.ok).map(v => [v.seg.a - 0.04, v.seg.b + 0.12]).sort((x,y)=>x[0]-y[0]);
+          const merged = []; for(const w of wins){ const last = merged[merged.length-1]; if(last && w[0] <= last[1]) last[1] = Math.max(last[1], w[1]); else merged.push(w.slice()); }
+          for(const [a,b] of merged){ const t1 = Math.max(ac.currentTime, at(a)), t2 = at(b); if(t2 <= ac.currentTime) continue;
+            g.gain.setValueAtTime(base, t1); g.gain.linearRampToValueAtTime(0, t1 + 0.03); g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(base, t2 + 0.05); }
+        }
+        const s = ac.createBufferSource(); s.buffer = tr.buf; s.connect(g);
+        const when = at(tr.t0); if(when >= ac.currentTime) s.start(when, 0); else s.start(ac.currentTime, ac.currentTime - when);
+        try{ s.stop(stopAt); }catch(e){}
+        this.sources.push(s);
+      });
+      // a full-mix sound nobody recorded, with every part muted: use the video's own sound
+      if(hasParts && P.modes && P.modes.every(m=>m==='mute')) voiced.filter(v => v.seg.stem<0 && !v.ok).forEach(v => window1(this.origBuf, 0, v.seg.a, v.seg.b));
+      S.segs.forEach((seg, i) => { const t = S.takes[i]; if(t && this.takes[i]) sched(this.takes[i], seg.a - PRE + t.off, t.gain); });
+    }
+    // captions: who's making the sound right now
+    const cap = $('#scCap');
+    const tick = () => {
+      const t = scVideo.currentTime;
+      if(t >= outT || scVideo.paused){ scVideo.pause(); cap.hidden = true; this.end(P); return; }
+      if(P.mode!=='orig'){
+        const seg = S.segs.find(s => t >= s.a && t <= s.b + 0.3);
+        if(seg){ const missing = !S.takes[S.segs.indexOf(seg)]; cap.hidden = false; cap.innerHTML = `<span class="mic">🎙</span> ${esc(nameOf(seg.who))}${seg.part ? ' · ' + esc(seg.part) : ''}${missing ? ' (original sound, no take)' : ''}${seg.note ? ' · ' + esc(seg.note) : ''}`; }
+        else cap.hidden = true;
+      }
+      this.capTimer = requestAnimationFrame(tick);
+    };
+    this.capTimer = requestAnimationFrame(tick);
+  },
+  end(P){
+    $('#scTitle').hidden = false; $('#seatStatus').textContent = '';
+    $('#scTitleText').textContent = P.mode==='orig' ? 'That was the original' : (S.title ? S.title : 'That’s a wrap!');
+    $('#scTitleSub').textContent = P.mode==='orig' ? 'Play ours again to compare.' : 'Play the original to compare.';
+  }
+};
+$('#seatBtn').onclick = () => screening.seat();
+function projector(mode){
+  if(!isHost() || S.phase!=='reveal') return;
+  const modes = [...document.querySelectorAll('#tracks select')].map(x => x.value);
+  S.play = { n:(S.play && S.play.n || 0) + 1, at: serverNow() + 2500, mode, modes };
+  commit(); screening.play();
+}
+$('#playDub').onclick = () => projector('dub');
+$('#playOrig').onclick = () => projector('orig');
+$('#stopBtn').onclick = () => { if(!isHost()) return; S.play = {...S.play, stop:true}; commit(); screening.stop(); };
+function renderTracks(){
+  const key = (S.video && S.video.id) + ':' + (S.stems||[]).length;
+  if(screening.tracksKey === key) return; screening.tracksKey = key;
+  const hasParts = (S.stems||[]).length > 0;
+  const list = hasParts ? S.stems.map(st => st.label) : ['Original sound'];
+  const opts = [['keep','Keep the original, swap in our sounds'],['mute','Only our sounds'],['quiet','Original quietly under ours']];
+  $('#tracks').innerHTML = `<span class="lbl">How each part sounds in our version</span>` + list.map((l,k)=>`<div class="tr"><span><b>${esc(l)}</b></span><select aria-label="${esc(l)}">${opts.map(([v,t])=>`<option value="${v}"${v===(hasParts?'keep':'mute')?' selected':''}>${t}</option>`).join('')}</select></div>`).join('');
+}
+
+// ================= rendering =================
+function render(){
+  if(!room) return;
+  const phase = S ? S.phase : 'lobby';
+  $('#lobby').hidden = phase!=='lobby';
+  $('#record').hidden = phase!=='record';
+  $('#reveal').hidden = phase!=='reveal';
+  // lobby
+  const host = isHost();
+  $('#editor').hidden = !(phase==='lobby' && host);
+  $('#waitPanel').hidden = !(phase==='lobby' && !host);
+  if(phase==='lobby' && !host){
+    $('#waitText').textContent = S && present(S.host) ? `${nameOf(S.host)} is choosing a scene and marking the sounds.` : 'Waiting for someone to host.';
+    $('#claimRow').hidden = !(S && (!present(S.host) || S.phase==='lobby'));
+    $('#claimBtn').textContent = S && present(S.host) ? 'Ask to host the next scene' : 'Host a scene';
+  }
+  // record
+  if(phase==='record'){
+    studio.render();
+    const total = S.segs.length, done = Object.keys(S.takes).length;
+    $('#hostWait').hidden = !host;
+    if(host){
+      $('#hostWaitText').textContent = `${done} of ${total} sounds recorded. Reveal when everyone's done, or any time. Missing sounds use the original audio.`;
+      $('#revealBtn').disabled = !S.video;
+      $('#revealHint').textContent = S.video ? (done < total ? `${total-done} still to come.` : 'Everyone’s done!') : 'Waiting for the video upload to finish…';
+      $('#vidProg').hidden = !!S.video && !H.uploading;
+    }
+  }
+  // reveal
+  if(phase==='reveal'){
+    $('#hostCtl').hidden = !host;
+    if(host) renderTracks();
+    $('#seatBtn').hidden = screening.seated;
+    if(!screening.seated){ $('#scTitle').hidden = false; $('#scTitleText').textContent = 'The screening'; $('#scTitleSub').textContent = 'Tap "Take my seat" to watch.'; }
+    const ready = peers.filter(p => p.presence && S.video && p.presence.ready===S.video.id).length;
+    const total = peers.filter(p => p.presence && p.presence.name).length;
+    if(host) $('#readyText').textContent = `${ready} of ${total} seated and ready. Playback starts 2.5 seconds after you press play, at the same moment for everyone.`;
+    $('#playDub').disabled = $('#playOrig').disabled = !screening.ready;
+    const cr = $('#credits');
+    cr.innerHTML = S.segs.map((s,i)=>`<li>${avHTML(s.who)}<span><b>${esc(nameOf(s.who))}</b>${s.part?` · ${esc(s.part)}`:''}${s.note?` · ${esc(s.note)}`:''}<span class="tag mono">${fmt(s.a)}–${fmt(s.b)}</span></span><span class="badge ${S.takes[i]?'ok':''}">${S.takes[i]?'Voiced':'Original'}</span></li>`).join('');
+  }
+  renderCrew();
+}
+function renderCrew(){
+  const list = peers.filter(p => p.presence && p.presence.name);
+  $('#crewTitle').textContent = `Crew · ${list.length}`;
+  $('#crew').innerHTML = list.map(p => {
+    const tags = []; if(p.peer===me) tags.push('you'); if(S && S.host===p.peer) tags.push('host');
+    let badge = '';
+    if(S && S.phase==='record'){
+      const mine = S.segs.filter(s=>s.who===p.peer).length, done = S.segs.filter((s,i)=>s.who===p.peer && S.takes[i]).length;
+      if(mine) badge = `<span class="badge ${done===mine?'ok':'rec'}">${done}/${mine}</span>`;
+    } else if(S && S.phase==='reveal'){
+      badge = p.presence.ready===(S.video&&S.video.id) ? '<span class="badge ok">seated</span>' : '<span class="badge">loading</span>';
+    }
+    return `<li class="${p.peer===me?'me':''}">${avHTML(p.peer)}<span class="nm">${esc(nameOf(p.peer))}<span class="tag">${tags.join(' · ')||'&nbsp;'}</span></span>${badge}</li>`;
+  }).join('');
+}
+
+// ================= joining =================
+let qCode = ''; try{ qCode = new URLSearchParams(location.search).get('room') || ''; }catch(e){}
+const hashCode = cleanCode(qCode);
+$('#nameIn').value = store.get('fp-name') || '';
+$('#roomIn').value = hashCode;
+function inviteLink(code){ return location.href.split('#')[0].split('?')[0] + '?room=' + code; }
+$('#createBtn').onclick = () => { creating = true; $('#roomIn').value = randomCode(); $('#joinForm').requestSubmit(); };
+$('#copyBtn').onclick = () => {
+  const url = inviteLink(room.code);
+  const fallback = () => { $('#inviteTxt').hidden = false; $('#inviteTxt').value = url; $('#inviteTxt').select(); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => { $('#copyBtn').textContent = 'Link copied'; setTimeout(()=>$('#copyBtn').textContent='Copy invite link', 1800); }, fallback);
+  else fallback();
+};
+$('#joinForm').onsubmit = e => {
+  e.preventDefault();
+  myName = $('#nameIn').value.trim().slice(0,16); if(!myName) return;
+  const code = cleanCode($('#roomIn').value);
+  if(!code){ const j = $('#joinErr'); j.textContent = 'Enter the room code your friend sent you, or create a room.'; j.hidden = false; return; }
+  store.set('fp-name', myName);
+  try{ history.replaceState(null, '', inviteLink(code)); }catch(err){}
+  const wasCreating = creating; creating = false;
+  room = makeServerRoom(code, (st, n) => {
+    const lbl = $('#roomLabel'); $('#connDot').classList.toggle('on', st==='connected');
+    if(st==='connected'){ hideNotice(); lbl.textContent = 'Room ' + code; syncClock(); }
+    else if(st==='connecting') lbl.textContent = 'Room ' + code + ' · connecting…';
+    else if(st==='lost'){ lbl.textContent = 'Room ' + code + ' · reconnecting…'; if(n>2) showNotice('Lost the connection to the game server. Reconnecting…'); }
+    else if(st==='unreachable'){ lbl.textContent = 'Room ' + code + ' · connecting…'; if(n>=2) showNotice(n<4 ? 'Starting the game server. The first visit after a quiet spell can take up to a minute.' : 'Still can’t reach the game server. The page keeps trying.'); }
+    else if(st==='full') showNotice('This room is full (12 players). Create a new room instead.');
+  });
+  me = room.label;
+  room.onRaw(onTime);
+  room.on('state', onState); room.on('take', onTake); room.on('claim', onClaim);
+  room.onPeers(ch => {
+    peers = ch.peers;
+    if(S && S.phase==='reveal') screening.onState(S);
+    if(isHost()) renderEditor();
+    render();
+  });
+  room.presence({ name: myName });
+  if(wasCreating){ S = newState(me); }
+  $('#join').hidden = true; $('#app').hidden = false; $('#roomPill').hidden = false; $('#copyBtn').hidden = false;
+  render();
+  // host heartbeat for late joiners; and take over hosting if the host vanished
+  setInterval(() => {
+    if(isHost() && room.connected()) { room.emit('state', S); }
+    if(S && !isHost() && !present(S.host) && S.phase==='lobby'){
+      const cand = peers.filter(p=>p.presence.name).map(p=>p.peer).sort()[0];
+      if(cand===me){ const v = S.v; S = newState(me); S.v = v + 100; commit(); }
+    }
+    if(!S && Date.now() - startedAt > 6000){
+      const cand = peers.filter(p=>p.presence.name).map(p=>p.peer).sort()[0];
+      if(cand===me){ S = newState(me); commit(); }
+    }
+    if(S && S.phase==='record' && !isHost() && !present(S.host)) showNotice(`${nameOf(S.host)} (the host) left. Ask them to rejoin; their scene is on their device.`);
+    render();
+  }, 2000);
+};
+const startedAt = Date.now();
+window.addEventListener('beforeunload', e => { if(isHost() && S && S.phase!=='lobby'){ e.preventDefault(); e.returnValue = ''; } });
+})();
+</script>
+</body>
+</html>
